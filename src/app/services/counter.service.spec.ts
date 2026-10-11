@@ -3,6 +3,7 @@ import { Preferences } from '@capacitor/preferences';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SavedCounter } from '../models/saved-counter';
 import { CounterService } from './counter.service';
+import { key } from 'ionicons/icons';
 
 vi.mock('@capacitor/preferences', () => ({
   Preferences: {
@@ -68,5 +69,91 @@ describe('CounterService', () => {
     expect(service.counters()).toEqual([]);
   });
 
-  // TODO: samostatně doplňte testy scénářů 1–5 ze zadání.
+  it('should load counters from Preferences', async () => {
+    getMock.mockResolvedValue({
+    value: JSON.stringify([first, second]),
+  });
+
+  await service.initialize();
+
+  expect(service.counters()).toEqual([first, second]);
+  expect(service.initialized()).toBe(true);
+  expect(getMock).toHaveBeenCalledWith({
+    key: 'saved-counters',
+  });
 });
+
+  it('should add a counter at the beginning', async () => {
+    getMock.mockResolvedValue({
+      value: JSON.stringify([second]),
+    });
+
+    await service.add(first);
+
+    expect(service.counters()).toEqual([first, second]);
+
+    expect(setMock).toHaveBeenCalledWith({
+      key: 'saved-counters',
+      value: JSON.stringify([first, second]),
+    });
+  });
+
+it('should remove only the counter with the specified id and persist the result', async () => {
+  getMock.mockResolvedValue({
+    value: JSON.stringify([first, second]),
+  });
+
+  await service.remove('first');
+
+  expect(service.counters()).toEqual([second]);
+
+  expect(setMock).toHaveBeenCalledWith({
+    key: 'saved-counters',
+    value: JSON.stringify([second]),
+  });
+});
+
+it('should clear history and remove only the saved-counters key', async () => {
+  getMock.mockResolvedValue({
+    value: JSON.stringify([first, second]),
+  });
+
+  await service.clear();
+
+  expect(service.counters()).toEqual([]);
+
+  expect(removeMock).toHaveBeenCalledTimes(1);
+  expect(removeMock).toHaveBeenCalledWith({
+    key: 'saved-counters',
+  });
+
+  expect(setMock).not.toHaveBeenCalled();
+});
+
+it('should handle invalid JSON and log an error', async () => {
+  const consoleError = vi
+    .spyOn(console, 'error')
+    .mockImplementation(() => {});
+
+    try {
+      getMock.mockResolvedValue({
+        value: 'this is not valid JSON',
+      });
+
+      await service.initialize();
+
+      expect(service.counters()).toEqual([]);
+      expect(service.initialized()).toBe(true);
+
+      expect(consoleError).toHaveBeenCalledWith(
+        'Historii počítadel se nepodařilo načíst.',
+        expect.any(SyntaxError),
+      );
+    }
+    finally {
+      consoleError.mockRestore();
+    }
+});
+
+});
+
